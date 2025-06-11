@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft, ifft, fftfreq
 from scipy.special import hermite, factorial
-from matplotlib.animation import FuncAnimation
 
 #Parameters
 L = 12
