@@ -4,13 +4,13 @@ from scipy.fft import fft, ifft, fftfreq
 from scipy.special import hermite, factorial
 
 #Parameters
-L = 12
+L = 10
 N = 4096
 x = np.linspace(-L, L, N)
 dx = x[1] - x[0]
 
-dt = 1e-4
-N_t = 5000
+dt = 1e-5
+N_t = 5000      #Number of time steps taken
 record = 10
 
 k = 2 * np.pi * fftfreq(N, d=dx)
@@ -24,6 +24,8 @@ psi_0i = np.exp(-x**2 / 2).astype(complex)
 psi_1i = x * np.exp(-x**2 / 2).astype(complex)
 
 psi_2i = (x**2 - 1) * np.exp(-x**2 / 2).astype(complex)
+
+psi_3i = (2 * x**3 - x) * np.exp(-x**2 / 2).astype(complex)
 
     #Orthoganlization 
 def project_out(psi, *states):
@@ -52,10 +54,11 @@ def split_step(psi, T, V, dt, ortho=[]):
         psi /= np.sqrt(np.trapz(np.abs(psi)**2, x))
         
         if t % record == 0:
-            evol.append(np.abs(psi.copy())**2)
+            evol.append(psi.copy())
 
     return psi, evol
 
+    #Calculation of energy using E = <T> /||ψ(k, t)^2|| + <V> 
 def energy(psi):
     psi_k = fft(psi)
     normk = np.trapz(np.abs(psi_k)**2, k)
@@ -73,27 +76,29 @@ def psi_analytic(x, n):
 psi_0f, evo0 = split_step(psi_0i, T, V, dt)
 psi_1f, evo1 = split_step(psi_1i, T, V, dt, ortho=[psi_0f])
 psi_2f, evo2 = split_step(psi_2i, T, V, dt, ortho=[psi_0f, psi_1f])
+psi_3f, evo3 = split_step(psi_3i, T, V, dt, ortho=[psi_0f, psi_1f, psi_2f])
 
-psi_0 = psi_analytic(x, 0)
-psi_1 = psi_analytic(x, 1)
-psi_2 = psi_analytic(x, 2)
-
+psi_0 = psi_analytic(x, 0).astype(complex)
+psi_1 = psi_analytic(x, 1).astype(complex)
+psi_2 = psi_analytic(x, 2).astype(complex)
+psi_3 = psi_analytic(x, 3).astype(complex)
 
 E0 = energy(psi_0f)
 E1 = energy(psi_1f)
 E2 = energy(psi_2f)
+E3 = energy(psi_3f)
 
-print(f'The energt for n = 0: {E0:.5f}')
-print(f'The energy for n = 1: {E1:.5f}')
-print(f'The energy for n = 2: {E2: .5f}')
+ene = [E0, E1, E2, E3]
+for e in range(len(ene)):
+    print(f'The energy for n = {e}: {ene[e]:.2f}')
 
 #Plot of Wavefunction densities
-fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
 
-numerical = [psi_0f, psi_1f, psi_2f]
-analytic = [psi_0, psi_1, psi_2]
-colors = ['blue', 'green', 'red']
-labels = ['Ground State', '1st Excited', '2nd Excited']
+numerical = [psi_0f, psi_1f, psi_2f, psi_3f]
+analytic = [psi_0, psi_1, psi_2, psi_3]
+colors = ['blue', 'green', 'red', 'orange']
+labels = ['Ground State', '1st Excited', '2nd Excited', '3rd Excited']
 
 for i, ax in enumerate(axs):
     # Plot wavefunctions
@@ -113,27 +118,140 @@ fig.suptitle("Numerical vs Analytical Harmonic Oscillator Eigenstates", fontsize
 plt.tight_layout(rect=[0, 0, 1, 0.96])
 plt.show()
 
-#Time Evolution of Wavefunctions
+#Time Evolution of Wavefunctions(?)
 times = np.arange(0, N_t, record) * dt
-evolution_stack = [evo0, evo1, evo2]
+evolution_stack = [evo0, evo1, evo2, evo3]
 titles = [
-    r"Ground State $|\psi_0(x,t)|^2$",
-    r"1st Excited $|\psi_1(x,t)|^2$", 
-    r"2nd Excited $|\psi(x, t)|^2$"]
+    r"Ground State $\Re(\psi_0(x,t))$",
+    r"1st Excited $\Re(\psi_1(x,t))$", 
+    r"2nd Excited $\Re(\psi(x, t))$",
+    r"3rd Excited $\Re(\psi(x, t))$"]
 
-fig, axs = plt.subplots(3, 1, figsize=(12, 8), sharex=True)
+fig, axs = plt.subplots(4, 1, figsize=(12, 8), sharex=True)
 
 for i, ax in enumerate(axs):
     im = ax.imshow(
-        evolution_stack[i],
+        np.real(evolution_stack[i]),
         extent=[x[0], x[-1], times[-1], times[0]],
         aspect='auto', cmap='plasma'
     )
     ax.set_ylabel("Time")
     ax.set_title(titles[i])
-    fig.colorbar(im, ax=ax, label=r"$|\psi(x,t)|^2$")
+    fig.colorbar(im, ax=ax, label=r"$\Re(\psi(x,t))$")
 
 axs[-1].set_xlabel("x")
 plt.suptitle("Time Evolution of Harmonic Oscillator States", fontsize=14)
+plt.tight_layout()
+plt.show()
+
+#Time Evolution of Wavefunctions(?)
+times = np.arange(0, N_t, record) * dt
+evolution_stack = [evo0, evo1, evo2, evo3]
+titles = [
+    r"Ground State $\Im(\psi_0(x,t))$",
+    r"1st Excited $\Im(\psi_1(x,t))$", 
+    r"2nd Excited $\Im(\psi(x, t))$",
+    r"3rd Excited $\Im(\psi(x, t))$"]
+
+fig, axs = plt.subplots(4, 1, figsize=(12, 8), sharex=True)
+
+for i, ax in enumerate(axs):
+    im = ax.imshow(
+        np.imag(evolution_stack[i]),
+        extent=[x[0], x[-1], times[-1], times[0]],
+        aspect='auto', cmap='plasma'
+    )
+    ax.set_ylabel("Time")
+    ax.set_title(titles[i])
+    fig.colorbar(im, ax=ax, label=r"$\Im(\psi(x,t))$")
+
+axs[-1].set_xlabel("x")
+plt.suptitle("Time Evolution of Harmonic Oscillator States", fontsize=14)
+plt.tight_layout()
+plt.show()
+
+import matplotlib.animation as animation
+
+# Set up the figure and axis
+fig, ax = plt.subplots(figsize=(10, 6))
+lines = []
+colors = ['blue', 'green', 'red', 'orange']
+labels = ['Ground State', '1st Excited', '2nd Excited', '3rd Excited']
+
+for i in range(4):
+    (line,) = ax.plot([], [], label=labels[i], color=colors[i])
+    lines.append(line)
+
+ax.set_xlim(x[0], x[-1])
+ax.set_ylim(-1, 1)
+ax.set_xlabel("x")
+ax.set_ylabel(r"$\Re(\psi(x,t))$")
+ax.set_title("Time Evolution of Real Part of Harmonic Oscillator States")
+ax.legend(loc='upper right')
+ax.grid(True)
+
+# Initialization function
+def init():
+    for line in lines:
+        line.set_data([], [])
+    return lines
+
+# Animation function
+def animate(i):
+    for j, line in enumerate(lines):
+        line.set_data(x, np.real(evolution_stack[j][i]))
+    return lines
+
+ani = animation.FuncAnimation(
+    fig,
+    animate,
+    frames=len(evolution_stack[0]),
+    init_func=init,
+    blit=True,
+    interval=10  # Adjust speed here (ms between frames)
+)
+
+plt.tight_layout()
+plt.show()
+
+# Set up the figure and axis
+fig, ax = plt.subplots(figsize=(10, 6))
+lines = []
+colors = ['blue', 'green', 'red', 'orange']
+labels = ['Ground State', '1st Excited', '2nd Excited', '3rd Excited']
+
+for i in range(4):
+    (line,) = ax.plot([], [], label=labels[i], color=colors[i])
+    lines.append(line)
+
+ax.set_xlim(x[0], x[-1])
+ax.set_ylim(-0.5, 0.5)
+ax.set_xlabel("x")
+ax.set_ylabel(r"$\Im(\psi(x,t))$")
+ax.set_title("Time Evolution of Imaginary Part of Harmonic Oscillator States")
+ax.legend(loc='upper right')
+ax.grid(True)
+
+# Initialization function
+def init():
+    for line in lines:
+        line.set_data([], [])
+    return lines
+
+# Animation function
+def animate(i):
+    for j, line in enumerate(lines):
+        line.set_data(x, np.imag(evolution_stack[j][i]))
+    return lines
+
+ani = animation.FuncAnimation(
+    fig,
+    animate,
+    frames=len(evolution_stack[0]),
+    init_func=init,
+    blit=True,
+    interval=5  # Adjust speed here (ms between frames)
+)
+
 plt.tight_layout()
 plt.show()
