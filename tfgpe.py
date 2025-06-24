@@ -85,4 +85,3 @@ plt.ylabel('Time')
 plt.title('Density Evolution $|\psi(x,t)|^2$ during Imaginary Time Evolution')
 plt.tight_layout()
 plt.show()
-
